@@ -9,7 +9,7 @@
 |
 */
 
-$GLOBALS['BASEURL']         = $BASEURL;
+$GLOBALS['BASEURL']         = $baseurl;
 $GLOBALS['localhost']       = $localhost;
 
 
@@ -38,7 +38,7 @@ if (App\Exceptions\ConfigException::$maintenance) {
 |
 */
 
-ini_set('display_errors', 0);
+ini_set('display_errors', 1);
 
 if ($DISPLAY_ERRORS) {
     ini_set('error_reporting', E_ALL);
