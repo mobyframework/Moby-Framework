@@ -9,7 +9,7 @@
 |
 */
 
-$GLOBALS['BASEURL']         = $BASEURL;
+$GLOBALS['BASEURL']         = $baseurl;
 $GLOBALS['localhost']       = $localhost;
 
 

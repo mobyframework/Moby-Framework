@@ -22,21 +22,21 @@ class ValidationRoute implements InterfaceValidationRoute
     public function validar_url($route, $call, $group = false)
     {
         $uri = $this->hasLocalhost();
-        
+
         $this->_url   = $uri;
         $this->_route = $route;
-        
+
         $this->hasGroup($group, $route);
         $this->hasparam($route, $uri);
         $this->hasUppercase();
-        
+
         return $this->isURL($route, $uri);
     }
-    
-    
+
+
     /**
      * Set valid params in the class
-     * 
+     *
      * @param string OR object $call
      * @param string $_param_url
      * @return void
@@ -46,27 +46,36 @@ class ValidationRoute implements InterfaceValidationRoute
         static::$_valid_call      = (is_object($call)) ? $call : explode(':', $call);
         static::$_valid_param_url = $_param_url;
     }
-    
-    
+
+
     /**
      * Verify if the environment is localhost and retrieve the parameters of URL
-     * 
+     *
      * @return string
      */
     public function hasLocalhost()
     {
         $uri = $_SERVER['REQUEST_URI'];
-        
+
         if (!$GLOBALS['localhost']) {
-            if ($_SERVER['HTTP_X_FORWARDED_PROTO'] . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] == $GLOBALS['baseurl']) {
+            $protocol = 'http';
+
+            if (
+                (isset($_SERVER['HTTPS']) && in_array($_SERVER['HTTPS'], array('on', 1))) ||
+                (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https')
+            ) {
+                $protocol = 'https';
+            }
+
+            if ($protocol . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] == $GLOBALS['baseurl']) {
                 return '/';
             }
-            
-            $uri = str_replace($GLOBALS['baseurl'], '', $_SERVER['HTTP_X_FORWARDED_PROTO'] . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
-            
+
+            $uri = str_replace($GLOBALS['baseurl'], '', $protocol . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
+
             return $uri;
         }
-        
+
         if (substr($uri, 0, 4) != 'http') {
             $uri = 'http://' . $_SERVER['HTTP_HOST'] . $uri;
         }
@@ -74,16 +83,16 @@ class ValidationRoute implements InterfaceValidationRoute
         if (!$GLOBALS['baseurl']) {
             return $uri;
         }
-        
+
         $uri = str_replace($GLOBALS['baseurl'], '', $uri);
-        
+
         return empty($uri) ? '/' : $uri;
     }
-    
-    
+
+
     /**
      * Verify if the route it's inside in group and format the route/url
-     * 
+     *
      * @param bool $group
      * @param string $route
      * @return void
@@ -93,7 +102,7 @@ class ValidationRoute implements InterfaceValidationRoute
         if (!$group) {
             return;
         }
-        
+
         if ($this->_group) {
             $this->_route  = $this->_group . $this->_route;
             $this->_group .= $route;
@@ -103,11 +112,11 @@ class ValidationRoute implements InterfaceValidationRoute
             $this->_url    = substr($this->_url, 0, strlen($this->_route));
         }
     }
-    
-    
+
+
     /**
      * Verify if has parameters in route and format the route/url
-     * 
+     *
      * @param string $route
      * @param string $uri
      * @return void
@@ -117,11 +126,11 @@ class ValidationRoute implements InterfaceValidationRoute
         if (!strripos($route, '{')) {
             return false;
         }
-        
+
         $this->_route       = explode('/{', $route)[0];
         $this->_param_route = explode(',', str_replace('}', '', explode('{', $route)[1]));
         $this->_url         = array_filter(explode('/', $this->_url));
-        
+
         foreach ($this->_param_route as $value) {
             if (substr($value, -1) != '?' && $this->_url) {
                 $this->_param_url[] = end($this->_url);
@@ -130,7 +139,7 @@ class ValidationRoute implements InterfaceValidationRoute
                 $this->_optional_param += 1;
             }
         }
-        
+
         $optional_param_array = 0;
         while ($this->_optional_param) {
             if (implode('/', $this->_url) != $this->_route) {
@@ -139,35 +148,35 @@ class ValidationRoute implements InterfaceValidationRoute
             } else {
                 $optional_param_array += 1;
             }
-            
+
             $this->_optional_param -= 1;
         }
-        
+
         $this->_param_url = array_reverse($this->_param_url);
-        
+
         for ($i = 0; $i < $optional_param_array; $i++) {
             $this->_param_url[] = false;
         }
-        
+
         $this->_url = implode('/', $this->_url);
     }
-    
-    
+
+
     /**
-     * Verify if has where and where clause is valid 
-     * 
+     * Verify if has where and where clause is valid
+     *
      * @return bool
-     */ 
+     */
     public function hasWhere()
     {
         if (!$this->_where || !$this->_param_route || !Route::$_valid_param_url) {
             return true;
         }
-        
+
         foreach ($this->_param_route as $key => $value) {
             if (isset($this->_where[$value]) && $this->_where[$value] && isset(Route::$_valid_param_url[$key]) && Route::$_valid_param_url[$key]) {
                 $conditions = explode('|', $this->_where[$value]);
-                
+
                 foreach ($conditions as $condition) {
                     if (!Validation::make(Route::$_valid_param_url[$key], $condition)) {
                         return false;
@@ -175,14 +184,14 @@ class ValidationRoute implements InterfaceValidationRoute
                 }
             }
         }
-        
+
         return true;
     }
-    
-    
+
+
     /**
      * Verify if should treat the caracters uppercase and lowercase
-     * 
+     *
      * @return void
      */
     public function hasUppercase()
@@ -190,15 +199,15 @@ class ValidationRoute implements InterfaceValidationRoute
         if (Route::$uppercase) {
             return;
         }
-        
+
         $this->_route = strtolower($this->_route);
         $this->_url   = strtolower($this->_url);
     }
-    
-    
+
+
     /**
      * Verify if has middleware for authentication
-     * 
+     *
      * @return bool
      */
     public function hasMiddleware()
@@ -206,14 +215,14 @@ class ValidationRoute implements InterfaceValidationRoute
         if (static::$_middleware && !static::$_valid_call) {
             return true;
         }
-        
+
         return false;
     }
-    
-    
+
+
     /**
      * Execute all functions inside middleware
-     * 
+     *
      * @return bool
      */
     public function authMiddleware()
@@ -222,42 +231,42 @@ class ValidationRoute implements InterfaceValidationRoute
             static::$verifyValidation = $auth;
             $call();
         }
-                
+
         if (!static::$verifyValidation) {
             return false;
         }
-        
+
         return true;
     }
-    
-    
+
+
     /**
      * Verify auth validation
-     * 
+     *
      * @return void
      */
     public function verifyValidation()
     {
         $auth = require( __DIR__ . '/../../../App/Config/auth.php');
-        
+
         if (!static::$verifyValidation) {
             return false;
         }
-        
+
         foreach ($auth['users'] as $key_user => $value_user) {
             if ($key_user == static::$verifyValidation && !Session::has($key_user)) {
                 $instance = new $value_user['middleware']();
                 $instance->redirect();
             }
         }
-        
+
         return true;
     }
-    
-    
+
+
     /**
      * Verify if the URL equals the route
-     * 
+     *
      * @param string $route
      * @param string $uri
      * @return bool
@@ -268,18 +277,18 @@ class ValidationRoute implements InterfaceValidationRoute
             Route::$currentURL = $this->_route . implode('/', $this->_param_url);
             return true;
         }
-        
+
         $this->clearParams($route);
         return false;
     }
-    
-    
+
+
     /**
      * Clear all params of Route class
-     * 
+     *
      * @paran string $route
      * @return void
-     */ 
+     */
     public function clearParams($route = false)
     {
         $this->_optional_param  = 0;
@@ -288,7 +297,7 @@ class ValidationRoute implements InterfaceValidationRoute
         $this->_param_url       = [];
         $this->_param_route     = [];
         $this->_where           = [];
-        
+
         if ($route) {
             $this->_group = str_replace($route, '', $this->_group);
         }
